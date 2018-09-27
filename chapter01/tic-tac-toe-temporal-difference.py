@@ -301,12 +301,14 @@ class Judge:
                 return current_state.winner
 
 
-# human interface
-# input a number to put a chessman
-# | q | w | e |
-# | a | s | d |
-# | z | x | c |
 class HumanPlayer:
+    """
+    Human interface
+    Input a number to put a chessman
+    | q | w | e |
+    | a | s | d |
+    | z | x | c |
+    """
     def __init__(self):
         self.symbol = None
         self.keys = ['q', 'w', 'e', 'a', 's', 'd', 'z', 'x', 'c']
