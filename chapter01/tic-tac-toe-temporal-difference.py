@@ -30,10 +30,6 @@ class State:
         >    -1 represents O
         >    0 represents an empty position
         """
-        # the board is represented by an n * n array,
-        # 1 represents X (plays first)
-        # -1 represents O
-        # 0 represents an empty position
         self.data = np.zeros((BOARD_ROWS, BOARD_COLS))
         self.winner = None
         self.hash_val = None
