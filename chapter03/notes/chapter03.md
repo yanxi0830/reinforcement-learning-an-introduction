@@ -132,22 +132,4 @@ $$q*(s, a) = \sum_{s', r}p(s', r|s, a) \left[r + \gamma \operatorname*{max}_{a'}
   - still unable to solve due to memory/cpu
   - approximations must be made
 
-- concerned with cases in which optimal solutions cannot be found but must be approximated in some way
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
----
+- RL: concerned with cases in which optimal solutions cannot be found but must be approximated in some way

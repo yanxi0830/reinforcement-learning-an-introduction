@@ -13,16 +13,17 @@ import matplotlib.pyplot as plt
 from matplotlib.table import Table
 
 WORLD_SIZE = 4
-# left, up, right, down
 ACTIONS = [np.array([0, -1]),
            np.array([-1, 0]),
            np.array([0, 1]),
            np.array([1, 0])]
 ACTION_PROB = 0.25
 
+
 def is_terminal(state):
     x, y = state
     return (x == 0 and y == 0) or (x == WORLD_SIZE - 1 and y == WORLD_SIZE - 1)
+
 
 def step(state, action):
     state = np.array(state)
@@ -35,8 +36,9 @@ def step(state, action):
     reward = -1
     return next_state, reward
 
+
 def draw_image(image):
-    fig, ax = plt.subplots()
+    fix, ax = plt.subplots()
     ax.set_axis_off()
     tb = Table(ax, bbox=[0, 0, 1, 1])
 
@@ -44,26 +46,32 @@ def draw_image(image):
     width, height = 1.0 / ncols, 1.0 / nrows
 
     # Add cells
-    for (i,j), val in np.ndenumerate(image):
-        # Index either the first or second item of bkg_colors based on
-        # a checker board pattern
+    for (i, j), val in np.ndenumerate(image):
+        # Index either the first or second item of bkg_colors based
+        # on a checker board pattern
         idx = [j % 2, (j + 1) % 2][i % 2]
         color = 'white'
 
-        tb.add_cell(i, j, width, height, text=val,
-                    loc='center', facecolor=color)
+        tb.add_cell(i, j, width, height, text=val, loc='center', facecolor=color)
 
-    # Row Labels...
+    # Row Labels
     for i, label in enumerate(range(len(image))):
-        tb.add_cell(i, -1, width, height, text=label+1, loc='right',
-                    edgecolor='none', facecolor='none')
-    # Column Labels...
+        tb.add_cell(i, -1, width, height, text=label+1, loc='right', edgecolor='none', facecolor='none')
+
+    # Column Labels
     for j, label in enumerate(range(len(image))):
-        tb.add_cell(-1, j, width, height/2, text=label+1, loc='center',
-                           edgecolor='none', facecolor='none')
+        tb.add_cell(-1, j, width, height/2, text=label+1, loc='center', edgecolor='none', facecolor='none')
+
     ax.add_table(tb)
 
+
 def compute_state_value(in_place=False):
+    """
+    Policy Evaluation
+    :param in_place: update using current state_value if True,
+                     otherwise use new_state_values for each iteration
+    :return: state_values, iteration
+    """
     new_state_values = np.zeros((WORLD_SIZE, WORLD_SIZE))
     state_values = new_state_values.copy()
     iteration = 1
@@ -78,6 +86,7 @@ def compute_state_value(in_place=False):
                     (next_i, next_j), reward = step([i, j], action)
                     value += ACTION_PROB * (reward + src[next_i, next_j])
                 new_state_values[i, j] = value
+
         if np.sum(np.abs(new_state_values - state_values)) < 1e-4:
             state_values = new_state_values.copy()
             break
@@ -87,15 +96,17 @@ def compute_state_value(in_place=False):
 
     return state_values, iteration
 
+
 def figure_4_1():
     values, sync_iteration = compute_state_value(in_place=False)
-    _, asycn_iteration = compute_state_value(in_place=True)
+    _, async_iteration = compute_state_value(in_place=True)
     draw_image(np.round(values, decimals=2))
-    print('In-place: %d iterations' % (asycn_iteration))
-    print('Synchronous: %d iterations' % (sync_iteration))
+    print('In-Place: {} iterations'.format(async_iteration))
+    print('Synchronous: {} iterations'.format(sync_iteration))
 
     plt.savefig('../images/figure_4_1.png')
     plt.close()
+
 
 if __name__ == '__main__':
     figure_4_1()
