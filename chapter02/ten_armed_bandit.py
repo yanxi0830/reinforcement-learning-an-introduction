@@ -15,8 +15,8 @@ from tqdm import tqdm
 
 
 class Bandit:
-    def __init__(self, k_arm=10, epsilon=0, initial=0, step_size=0.1, sample_averages=False, UCB_param=None,
-                 gradient=False, gradient_baseline=False, true_reward = 0.):
+    def __init__(self, k_arm=10, epsilon=0.0, initial=0, step_size=0.1, sample_averages=False, UCB_param=None,
+                 gradient=False, gradient_baseline=False, true_reward=0.0, nonstationary=False):
         """
         Initialize Bandit Problem to run different algorithms
         :param k_arm: number of arms
@@ -41,6 +41,7 @@ class Bandit:
         self.true_reward = true_reward
         self.epsilon = epsilon
         self.initial = initial
+        self.nonstationary = nonstationary
 
         # real reward for each action
         self.q_true = np.random.randn(self.k) + self.true_reward
@@ -93,8 +94,15 @@ class Bandit:
         :param action: action in [0, 1, ..., k-1]
         :return: actual reward got from taking action
         """
+        if self.nonstationary:
+            # All the real_reward start out equal and then take independent random
+            # walks (by adding a normally distributed increment with mean zero,
+            # and standard deviation 0.01 to all the q*(a) on each step).
+            self.q_true += 0.01 * np.random.randn()
+
         # generate the reward under N(real_reward, 1)
         reward = np.random.randn() + self.q_true[action]
+
         self.time += 1
         self.average_reward = (self.time - 1.0) / self.time * self.average_reward + reward / self.time
         self.action_count[action] += 1
@@ -109,7 +117,7 @@ class Bandit:
                 baseline = self.average_reward
             else:
                 baseline = 0
-            self.q_estimation = self.q_estimation + self.step_size * (reward - baseline) (one_hot - self.action_prob)
+            self.q_estimation = self.q_estimation + self.step_size * (reward - baseline) * (one_hot - self.action_prob)
         else:
             # update estimation with constant step size
             self.q_estimation[action] += self.step_size * (reward - self.q_estimation[action])
@@ -158,7 +166,7 @@ def figure_2_2(runs=2000, time=1000):
     """
     epsilons = [0, 0.1, 0.01]
     bandits = [Bandit(epsilon=eps, sample_averages=True) for eps in epsilons]
-    best_action_counts, rewards = simulate(runs, time, bandits)
+    best_action_counts, rewards= simulate(runs, time, bandits)
 
     plt.figure(figsize=(10, 20))
 
@@ -253,16 +261,17 @@ def figure_2_6(runs=2000, time=1000):
     Each point is the average reward obtained over 1000 steps with a particular algorithm
     at a particular setting of its parameter.
     """
-    labels = ['epsilog-greedy', 'gradient bandit', 'UCB', 'optimistic initialization']
-
+    labels = ['epsilon-greedy', 'gradient bandit',
+              'UCB', 'optimistic initialization']
     generators = [lambda epsilon: Bandit(epsilon=epsilon, sample_averages=True),
                   lambda alpha: Bandit(gradient=True, step_size=alpha, gradient_baseline=True),
                   lambda coef: Bandit(epsilon=0, UCB_param=coef, sample_averages=True),
                   lambda initial: Bandit(epsilon=0, initial=initial, step_size=0.1)]
-    parameters = [np.arange(-7. -1, dtype=np.float),
+    parameters = [np.arange(-7, -1, dtype=np.float),
                   np.arange(-5, 2, dtype=np.float),
                   np.arange(-4, 3, dtype=np.float),
                   np.arange(-2, 3, dtype=np.float)]
+
     bandits = []
     for generator, parameter in zip(generators, parameters):
         for param in parameter:
@@ -274,20 +283,105 @@ def figure_2_6(runs=2000, time=1000):
     i = 0
     for label, parameter in zip(labels, parameters):
         l = len(parameter)
-        plt.plot(parameter, rewards[i:i+l], label=label)
+        plt.plot(parameter, rewards[i:i + l], label=label)
         i += l
     plt.xlabel('Parameter(2^x)')
     plt.ylabel('Average reward')
     plt.legend()
 
     plt.savefig('../images/figure_2_6.png')
+    plt.close()
+
+
+def exercise_2_5(runs=2000, time=10000):
+    """
+    Design and conduct an experiment to demonstrate the difficulties that sample-avaerage methods
+    have for nonstationary problems. Use a modified version of the 10-armed testbed in which
+    all the q*(a) start out equal and then take independent random walks (say by adding a normally
+    distributed increment with mean zero and standard deviation 0.01 to all the q*(a) on each step).
+    Prepare plots like Figure 2.2 for an action-value method using sample averages, incrementally computed,
+    and another action-value method using a constant step-size parameter, alpha=0.01. Use epsilon=0.1,
+    and longer runs, say 10,000 steps.
+    """
+    bandits = []
+    bandits.append(Bandit(epsilon=0.1, sample_averages=True, nonstationary=True))
+    bandits.append(Bandit(epsilon=0.1, step_size=0.1, nonstationary=True))
+    bandits.append(Bandit(epsilon=0.1, sample_averages=True))
+    bandits.append(Bandit(epsilon=0.1, step_size=0.1))
+    best_action_counts, rewards = simulate(runs, time, bandits)
+
+    plt.figure(figsize=(10, 20))
+
+    plt.subplot(2, 1, 1)
+    plt.plot(rewards[0], label='epsilon = 0.1, sample_averages, non-stationary')
+    plt.plot(rewards[1], label='epsilon = 0.1, step_size=0.1, non-stationary')
+    plt.plot(rewards[2], label='epsilon = 0.1, sample_averages, stationary')
+    plt.plot(rewards[3], label='epsilon = 0.1, step_size=0.1, stationary')
+    plt.xlabel('steps')
+    plt.ylabel('average reward')
+    plt.legend()
+
+    plt.subplot(2, 1, 2)
+    plt.plot(best_action_counts[0], label='epsilon = 0.1, sample_averages, non-stationary')
+    plt.plot(best_action_counts[1], label='epsilon = 0.1, step_size=0.1, non-stationary')
+    plt.plot(best_action_counts[2], label='epsilon = 0.1, sample_averages, stationary')
+    plt.plot(best_action_counts[3], label='epsilon = 0.1, step_size=0.1, stationary')
+    plt.xlabel('steps')
+    plt.ylabel('% optimal action')
+    plt.legend()
+
+    plt.savefig('../images/exercise_2_5.png')
     plt.show()
 
 
+def exercise_2_11(runs=2000, time=20000):
+    """
+    Make a figure analogous to Figure 2.6 for the nonstationary case outlined in Exercise 2.5
+    Include the constant-step-size epislon-greedy algorithm with alpha=0.1.
+    Use runs of 200,000 steps, and as a performance measure for each algorithm and
+    parameter setting, use the average reward over the last 100,000 steps.
+    """
+    labels = ['epsilon-greedy', 'gradient bandit',
+              'UCB', 'optimistic initialization']
+    generators = [lambda epsilon: Bandit(epsilon=epsilon, sample_averages=True, nonstationary=True),
+                  lambda alpha: Bandit(gradient=True, step_size=alpha, gradient_baseline=True, nonstationary=True),
+                  lambda coef: Bandit(epsilon=0, UCB_param=coef, sample_averages=True, nonstationary=True),
+                  lambda initial: Bandit(epsilon=0, initial=initial, step_size=0.1, nonstationary=True)]
+    parameters = [np.arange(-7, -1, dtype=np.float),
+                  np.arange(-5, 2, dtype=np.float),
+                  np.arange(-4, 3, dtype=np.float),
+                  np.arange(-2, 3, dtype=np.float)]
+
+    bandits = []
+    for generator, parameter in zip(generators, parameters):
+        for param in parameter:
+            bandits.append(generator(pow(2, param)))
+
+    _, average_rewards = simulate(runs, time, bandits)
+    print(average_rewards.shape)
+    # take the last 10000 steps
+    average_rewards = average_rewards[:, 10000:]
+    rewards = np.mean(average_rewards, axis=1)
+
+    i = 0
+    for label, parameter in zip(labels, parameters):
+        l = len(parameter)
+        plt.plot(parameter, rewards[i:i + l], label=label)
+        i += l
+    plt.xlabel('Parameter(2^x)')
+    plt.ylabel('Average reward')
+    plt.legend()
+
+    plt.savefig('../images/figure_2_6.png')
+    plt.close()
+
+
 if __name__ == "__main__":
-    figure_2_1()
-    figure_2_2()
-    figure_2_3()
-    figure_2_4()
-    figure_2_5()
-    figure_2_6()
+    # figure_2_1()
+    # figure_2_2()
+    # figure_2_3()
+    # figure_2_4()
+    # figure_2_5()
+    # figure_2_6()
+    # exercise_2_5()
+    exercise_2_11()
