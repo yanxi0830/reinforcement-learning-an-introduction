@@ -62,4 +62,6 @@ Use 2 policies
 ##### Importance Sampling
 General technique for estimating expected values under one distribution given samples from another
 - weighting returns according to the relative probability of their trajectories occurring under the target and behavior policies **importance-sampling ratio**
--
+$$p_{t:T-1} = \prod_{k=t}^{T-1} \frac{\pi(A_k|S_k)}{b(A_k|S_k)}$$
+
+## 5.6 Incremental Implementation
